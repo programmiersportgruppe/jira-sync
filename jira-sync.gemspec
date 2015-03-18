@@ -6,7 +6,7 @@ Gem::Specification.new do |s|
                     an incremental update.
 
                     Each ticket is stored in a simple, pretty printed JSON file.'
-  s.version      = '0.1'
+  s.version      = '0.2'
   s.platform     = Gem::Platform::RUBY
 
   s.files        = ['bin/jira-sync']
