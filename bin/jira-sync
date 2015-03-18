@@ -1,0 +1,226 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'httparty'
+require 'uri'
+require 'io/console'
+require 'fileutils'
+require 'json'
+require 'date'
+require 'parallel'
+require 'trollop'
+
+class JiraClient
+
+  def initialize(baseurl, username, password)
+    @username = username
+    @password = password
+    @baseurl = baseurl
+  end
+
+  def get(jira_id)
+      url = "#{@baseurl}/rest/api/latest/issue/#{jira_id}"
+      auth = {:username => @username, :password => @password}
+      response = HTTParty.get url, { :basic_auth => auth }
+      if response.code == 200
+         response.parsed_response
+      else
+        raise "no issue found for #{jira_id}. response code was #{response.code}, url was #{url}"
+      end
+  end
+
+  def latest_issue_for_project(project_id)
+      url = "#{@baseurl}/rest/api/2/search?"
+      auth = {:username => @username, :password => @password}
+
+      response = HTTParty.get url, { :basic_auth => auth, :query => {:jql=>'project="' + project_id + '" order by created', fields:'summary,updated', maxResults:'1'}}
+      if response.code == 200
+         response.parsed_response
+      else
+        raise "no issue found for #{project_id}. response code was #{response.code}, url was #{url}"
+      end
+  end
+
+  def changed_since(project_id, date)
+      url = "#{@baseurl}/rest/api/2/search?"
+      auth = {:username => @username, :password => @password}
+      jql = 'project = "' + project_id + '" AND updated > ' + (date.to_time.to_i * 1000).to_s
+      # "' + date.to_s + '"'
+      response = HTTParty.get url, { :basic_auth => auth, :query => {:jql=> jql, fields:'summary,updated', maxResults:'1000'}}
+      if response.code == 200
+         response.parsed_response
+      else
+        raise "no issue found for #{project_id}. response code was #{response.code}, url was #{url}"
+      end
+  end
+
+  def project_info(project_id)
+      url = "#{@baseurl}/rest/api/2/project/#{project_id}"
+      auth = {:username => @username, :password => @password}
+      response = HTTParty.get url, { :basic_auth => auth, :query => {:jql=>'project="' + project_id + '"' , fields:'summary,updated', maxResults:'50'}}
+      if response.code == 200
+         response.parse_response
+      else
+        raise "no issue found for #{project_id}. response code was #{response.code}, url was #{url}"
+      end
+
+  end
+end
+
+
+class LocalIssueRepository
+
+    def initialize(path)
+        @path = path
+        FileUtils::mkdir_p @path
+    end
+
+    def save(issue)
+        json = JSON.pretty_generate(issue)
+        file_path = "#{@path}/#{issue['key']}.json"
+        File.write(file_path, json)
+
+        updateTime = DateTime.parse(issue['fields']['updated'])
+
+        File.utime(DateTime.now.to_time, updateTime.to_time, file_path)
+    end
+
+    def save_state(state)
+        json = JSON.pretty_generate(state)
+        file_path = "#{@path}/sync_state.json"
+        File.write(file_path, json)
+    end
+
+    def load_state()
+        file_path = "#{@path}/sync_state.json"
+        if (!File.exists?(file_path))
+            raise ("File '#{file_path}' with previous sync state could not be found\n" +
+                  "please run an initial fetch first")
+        end
+        s = IO.read(file_path)
+        JSON.parse(s)
+    end
+end
+
+
+class Syncer
+
+    def initialize(client, repo, project_key)
+        @client = client
+        @project_key = project_key
+        latest_issue = @client.latest_issue_for_project(@project_key)['issues'][0]
+        @latest_issue_key = latest_issue['key'].split("-")[1].to_i
+        @repo = repo
+    end
+
+
+    # Fetches a number of tickets in parallel
+    # prints progress information to stderr
+    # and returns a list of tickets that
+    # couldn't be fetched.
+    def fetch(keys)
+        keys_with_errors = []
+        Parallel.each_with_index(keys, :in_threads => 64) do |key, index|
+            STDERR.puts(key) if ((index % 100) == 0)
+            begin
+                issue = @client.get(key)
+                issue_project_key = issue['fields']['project']['key']
+                if (issue_project_key == @project_key)
+                    @repo.save(issue)
+                else
+                    STDERR.puts("Skipping ticket #{key} which has moved to #{issue_project_key}.")
+                end
+            rescue => e
+                STDERR.puts(e.to_s)
+                keys_with_errors.push(key)
+            end
+        end
+        keys_with_errors.sort
+    end
+
+    def fetch_all
+        start_time = DateTime.now
+
+        keys = (1..@latest_issue_key).map{|key_number| @project_key + "-" + key_number.to_s}
+        keys_with_errors = fetch(keys)
+
+        @repo.save_state({"time" => start_time, "errors" => keys_with_errors})
+    end
+
+    def update()
+        state = @repo.load_state()
+        start_time = DateTime.now
+        since = DateTime.parse(state['time']).new_offset(0)
+        STDERR.puts("Fetching issues that have changes since #{since.to_s}")
+        issues = @client.changed_since(@project_key, since)['issues'].map{|issue| issue['key']}
+        STDERR.puts("Updated Issues")
+        STDERR.puts(issues.join(", "))
+        STDERR.puts("Issues with earlier errors")
+        STDERR.puts(state['errors'].join(", "))
+        keys_with_errors = fetch(issues + state['errors'])
+        @repo.save_state({"time" => start_time, "errors" => keys_with_errors})
+    end
+
+    def dump()
+        puts(@latest_issue_key)
+
+    end
+
+end
+
+
+def prompt_for_password
+    print("Please enter password: ")
+    pw = STDIN.noecho(&:gets).chomp
+    puts
+    pw
+end
+
+opts = Trollop::options do
+    banner <<-EOS
+Utility to sync a jira project to the local file system.
+
+Usage:
+       jira-sync [options] [command]
+where command is one of the following
+
+  fetch-all: fetches all tickets from the given project
+     update: fetches all tickets that have been updated/
+             added since the last run
+
+where [options] are:
+EOS
+    opt :baseurl, "Jira base url", :type => :string
+    opt :project, "Project key", :type => :string
+    opt :user, "User, defaults to the current system user", :type => :string
+    opt :password, "Password, if not specified there, will be an interactive prompt", :type => :string
+    opt :target, "Target directory, defaults to the project key", :type => :string
+end
+
+Trollop::die :baseurl, "must be speficied" if !opts[:baseurl]
+Trollop::die :project, "must be speficied" if !opts[:project]
+
+
+user = opts[:user] || ENV['USER']
+pw = opts[:password] || prompt_for_password
+target = opts[:target] || opts[:project].chomp
+
+command = ARGV[0]
+
+if !["fetch", "update"].include?(command)
+    STDERR.puts("'#{command}' is not a valid command")
+    exit 1
+end
+
+
+client = JiraClient.new(opts[:baseurl], user, pw)
+repo = LocalIssueRepository.new(target)
+syncer = Syncer.new(client, repo, opts[:project].chomp)
+
+if command == "fetch"
+    syncer.fetch_all
+end
+
+if command == "update"
+    syncer.update
+end
