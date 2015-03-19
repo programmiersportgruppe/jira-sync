@@ -4,9 +4,7 @@ require 'rubygems'
 require 'io/console'
 require 'trollop'
 
-
 require 'jirasync'
-
 
 def prompt_for_password
     print("Please enter password: ")
