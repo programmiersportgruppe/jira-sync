@@ -1,27 +1,19 @@
-Gem::Specification.new do |s|
-  s.name         = 'jira-sync'
-  s.summary      = 'jira-sync synchronises jira projects to the local file system'
-  s.description  = 'jira-sync synchronises tickets from a jira project to the local
-                    file system. It supports a complete fetch operation as well as
-                    an incremental update.
+# -*- encoding: utf-8 -*-
+lib = File.expand_path('../lib', __FILE__)
+$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
+require 'jira-sync/version'
 
-                    Each ticket is stored in a simple, pretty printed JSON file.'
-  s.version      = '0.2'
-  s.platform     = Gem::Platform::RUBY
+Gem::Specification.new do |gem|
+  gem.name          = "jira-sync"
+  gem.version       = Jira::Sync::VERSION
+  gem.authors       = ["Felix Leipold"]
+  gem.email         = ["felix.leipold@gmail.com"]
+  gem.description   = %q{TODO: Write a gem description}
+  gem.summary       = %q{TODO: Write a gem summary}
+  gem.homepage      = ""
 
-  s.files        = ['bin/jira-sync']
-
-  s.bindir = 'bin'
-
-  s.files         = `git ls-files`.split("\n")
-  s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
-
-  s.author      = 'Felix Leipold'
-  s.email       = ''
-  s.homepage    = 'https://github.com/programmiersportgruppe/jira-sync'
-
-
-  s.add_dependency('trollop')
-  s.add_dependency('httparty')
-  s.add_dependency('parallel')
+  gem.files         = `git ls-files`.split($/)
+  gem.executables   = gem.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
+  gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
+  gem.require_paths = ["lib"]
 end

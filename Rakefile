@@ -1,5 +1,5 @@
 task :default => :build
 
 task :build do
-    system "gem build jira-sync.gemspec"
+    system "gem build jirasync.gemspec"
 end
