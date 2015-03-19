@@ -49,7 +49,7 @@ The following statement will sync issues that have changed or where added during
         --user jira_user \
         --password jira_password \
         --target issues/MYPROJ \
-        fetch
+        update
 
 ## Motivation
 
