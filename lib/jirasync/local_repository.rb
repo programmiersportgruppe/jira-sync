@@ -20,6 +20,11 @@ module JiraSync
             File.utime(DateTime.now.to_time, updateTime.to_time, file_path)
         end
 
+        def state_exists?
+            file_path = "#{@path}/sync_state.json"
+            File.exist?(file_path)
+        end
+
         def save_state(state)
             json = JSON.pretty_generate(state)
             file_path = "#{@path}/sync_state.json"

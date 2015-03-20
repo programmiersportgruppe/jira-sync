@@ -41,6 +41,7 @@ Trollop::die :project, "must be speficied" if !opts[:project]
 user = opts[:user] || ENV['USER']
 pw = opts[:password] || prompt_for_password
 target = opts[:target] || opts[:project].chomp
+project = opts[:project]
 
 command = ARGV[0]
 
@@ -51,12 +52,47 @@ end
 
 client = JiraSync::JiraClient.new(opts[:baseurl], user, pw)
 repo = JiraSync::LocalIssueRepository.new(target)
-syncer = JiraSync::Syncer.new(client, repo, opts[:project].chomp)
+syncer = JiraSync::Syncer.new(client, repo, project)
 
 if command == "fetch"
+    if (repo.state_exists?)
+        update_statement=<<-END
+jira-sync \
+    --baseurl #{opts[:baseurl]} \\
+    --user #{user} \\
+    --project #{project} \\
+    --target #{target} \\
+    update
+        END
+
+        STDERR.puts <<-END
+Synchronisation state file found. Please use 'update' for incremental update
+or sync to an empty directory. Try to use a statement along the following lines
+#{update_statement}
+        END
+        exit 1
+    end
     syncer.fetch_all
 end
 
 if command == "update"
+    if (!repo.state_exists?)
+        fetch_statement=<<-END
+jira-sync \
+    --baseurl #{opts[:baseurl]} \\
+    --user #{user} \\
+    --project #{project} \\
+    --target #{target} \\
+    fetch
+        END
+
+        STDERR.puts <<-END
+No synchronisation state file found. Please use 'fetch' for an initial download.
+Try to use a statement along the following lines
+#{fetch_statement}
+        END
+        exit 1
+    end
+
     syncer.update
 end
