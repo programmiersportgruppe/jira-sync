@@ -34,6 +34,8 @@ module JiraSync
                     if (e.status != 404)
                         STDERR.puts(e.to_s)
                         keys_with_errors.push(key)
+                    else
+                        STDERR.puts("Ignoring 404 for ticket #{key}")
                     end
                 rescue => e
                     STDERR.puts(e.to_s)
