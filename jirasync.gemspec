@@ -1,3 +1,6 @@
+require 'jirasync/version'
+
+
 Gem::Specification.new do |s|
   s.name         = 'jirasync'
   s.summary      = 'jirasync synchronises jira projects to the local file system'
@@ -6,7 +9,7 @@ Gem::Specification.new do |s|
                     an incremental update.
 
                     Each ticket is stored in a simple, pretty printed JSON file.'
-  s.version      = '0.3'
+  s.version      = JiraSync::VERSION
   s.platform     = Gem::Platform::RUBY
 
   s.files        = ['bin/jira-sync']
