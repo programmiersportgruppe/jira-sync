@@ -4,6 +4,15 @@ module JiraSync
     require 'uri'
     require 'json'
 
+    class FetchError < StandardError
+        attr_reader :status, :message
+
+        def initialize(status, message)
+            @reason = status
+            @message = message
+        end
+    end
+
 
     class JiraClient
 
@@ -20,7 +29,7 @@ module JiraSync
             if response.code == 200
                 response.parsed_response
             else
-                raise "no issue found for #{jira_id}. response code was #{response.code}, url was #{url}"
+                raise FetchError(response.code, "error retrieving #{jira_id}. response code was #{response.code}, url was #{url}")
             end
         end
 
@@ -32,7 +41,7 @@ module JiraSync
             if response.code == 200
                 response.parsed_response
             else
-                raise "no issue found for #{project_id}. response code was #{response.code}, url was #{url}"
+                raise FetchError(response.status, "no issue found for #{project_id}. response code was #{response.code}, url was #{url}")
             end
         end
 
@@ -45,7 +54,7 @@ module JiraSync
             if response.code == 200
                 response.parsed_response
             else
-                raise "no issue found for #{project_id}. response code was #{response.code}, url was #{url}"
+                raise FetchError(response.status, "no issue found for #{project_id}. response code was #{response.code}, url was #{url}")
             end
         end
 

@@ -3,7 +3,6 @@ module JiraSync
     require 'json'
     require 'date'
 
-
     class Syncer
 
         def initialize(client, repo, project_key)
@@ -13,7 +12,6 @@ module JiraSync
             @latest_issue_key = latest_issue['key'].split("-")[1].to_i
             @repo = repo
         end
-
 
         # Fetches a number of tickets in parallel
         # prints progress information to stderr
@@ -30,6 +28,12 @@ module JiraSync
                         @repo.save(issue)
                     else
                         STDERR.puts("Skipping ticket #{key} which has moved to #{issue_project_key}.")
+                    end
+
+                rescue FetchError => e
+                    if (e.status != 404)
+                        STDERR.puts(e.to_s)
+                        keys_with_errors.push(key)
                     end
                 rescue => e
                     STDERR.puts(e.to_s)
@@ -55,9 +59,9 @@ module JiraSync
             STDERR.puts("Fetching issues that have changes since #{since.to_s}")
             issues = @client.changed_since(@project_key, since)['issues'].map { |issue| issue['key'] }
             STDERR.puts("Updated Issues")
-            STDERR.puts(issues.join(", "))
+            STDERR.puts(issues.empty? ?  "None" : issues.join(", "))
             STDERR.puts("Issues with earlier errors")
-            STDERR.puts(state['errors'].join(", "))
+            STDERR.puts(state['errors'].empty? ? "None" : state['errors'].join(", "))
             keys_with_errors = fetch(issues + state['errors'])
             @repo.save_state({"time" => start_time, "errors" => keys_with_errors})
         end
