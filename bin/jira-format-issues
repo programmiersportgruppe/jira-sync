@@ -1,0 +1,195 @@
+#!/usr/bin/env ruby
+
+require 'fileutils'
+require 'json'
+require 'trollop'
+require 'pathname'
+require 'uri'
+
+
+class IssueRenderer
+    
+    def initialize(custom_data)
+        @custom_data = custom_data
+    end
+
+    def h1(s)
+        s + "\n" + ("=" * s.length)
+    end
+
+    def h2(s)
+        s + "\n" + ("-" * s.length)
+    end
+
+    def wrap(s, width=78)
+        s.gsub(/(.{1,#{width}})(\s+|\Z)/, "\\1\n")
+    end
+
+    def optional_section(title, content)
+        return "" if !content
+        return "" if content == ""
+        h2(title) + "\n\n" + content
+    end
+
+    def format_date(date)
+        date.strftime("%d. %b %Y %H:%M (UTC)")
+    end
+
+    def render_comments(comments)
+        return "" if comments.length == 0
+
+
+        h2("Comments") + "\n" * 2 +
+            (comments.map{|comment|
+                author = comment['author']['name']
+                date = DateTime.parse(comment['updated'])
+                "### #{author} - #{format_date(date)}:\n\n" +
+                    comment['body'] + "\n"
+            }.join("\n-------------------------------------------\n\n"))
+    end
+
+    def render_links(links, project_key)
+        return "" if links.length == 0
+
+        h2("Links") + "\n" * 2 +
+            links.map{|link|
+                outward_issue = link['outwardIssue']
+                inward_issue  = link['inwardIssue']
+                rel_name = link['type']['name']
+                inward_name = link['type']['inward']
+                outward_name = link['type']['outward']
+                if (outward_issue)
+                    uri = URI(outward_issue['self'])
+                    key = outward_issue['key']
+                    uri.path = "/browse/#{key}"
+
+                    if (key.start_with?(project_key))
+                        link = key + ".md"
+                    else
+                        link = uri.to_s
+                    end
+                    "* " + outward_name.capitalize + " [#{key}](#{link})\n"
+                else
+                    uri = URI(inward_issue['self'])
+                    key = inward_issue['key']
+                    uri.path = "/browse/#{key}"
+                    if (key.start_with?(project_key))
+                        link = key + ".md"
+                    else
+                        link = uri.to_s
+                    end
+
+                    "* " + inward_name.capitalize + " [#{key}](#{link.to_s})\n"
+                end
+            }.join("\n" * 2)
+    end
+
+    def render_attachments(attachments)
+        return "" if attachments.length == 0
+
+        h2("Attachments") + "\n" * 2 +
+            attachments.map{|attachment|
+                filename    = attachment['filename']
+                content_url = attachment['content']
+                "* [#{filename}](#{content_url})"
+            }.join("\n" * 2)
+    end
+
+    def render(issue)
+        
+
+        fields =  issue['fields']
+        type = fields['issuetype']['name']
+        key = issue['key']
+        summary = fields['summary']
+        status = fields['status']['name']
+        reporter = fields['reporter']['name']
+        description = fields['description']
+        labels = fields['labels']
+        comments = fields['comment']['comments']
+        links = fields['issuelinks']
+        attachments = fields['attachment']
+        project_key = fields['project']['key']
+
+        created = DateTime.parse(fields['created'])
+        updated = DateTime.parse(fields['updated'])
+
+        uri = URI(issue['self'])
+        uri.path = "/browse/#{key}"
+
+        simple_fields = {
+            "Type" => type,
+            "Status" => status,
+            "Reporter" => reporter,
+            "Labels" => labels.join(", "),
+            "Updated" => format_date(updated),
+            "Created" => format_date(created)
+        }
+        
+        simple_fields = simple_fields.to_a + @custom_data['simple_fields'].map{|kv| [kv[0], kv[1].inject(fields) { |acc, key | acc && acc[key] }]}
+
+        sections = {
+            "Description" => description,
+        }
+
+        sections = sections.to_a + @custom_data['sections'].map{|kv| [kv[0], kv[1].inject(fields) { |acc, key | acc && acc[key] }]}
+
+        return h1("[#{key}](#{uri}): #{summary}") +
+                "\n\n" +
+                simple_fields.map{|kv| kv[0] + "\n:   " + (kv[1] || "-")}.join("\n\n") + "\n\n" +
+                sections.select{|kv| kv[1]}.map{|kv| optional_section(kv[0], kv[1])}.join("\n\n") + "\n\n" +
+                render_links(links, project_key) + "\n\n" +
+                render_comments(comments) + "\n\n" +
+                render_attachments(attachments)
+    end
+end
+
+opts = Trollop::options do
+    banner <<-EOS
+Utility to render jira issues from a source :directory to a target directory
+
+Usage:
+       jira-format-issues [options]
+
+where [options] are:
+EOS
+    opt :source, "Source directory containing json files for issues", :type => :string
+    opt :target, "Target directory", :type => :string
+    opt :custom_data_path, "Custom data description file (optional)", :type => :string
+end
+
+Trollop::die :source, "must be speficied" if !opts[:source]
+Trollop::die :target, "must be speficied" if !opts[:target]
+
+source = opts[:source]
+target = opts[:target]
+
+FileUtils::mkdir_p target
+
+
+input_files = Dir[source + "/*.json"]
+
+custom_data_path = opts[:custom_data_path]
+if (custom_data_path)
+    custom_data = JSON.parse(IO.read(custom_data_path))
+else
+    custom_data = {'simple_fields' => [], 'sections' => []}
+end
+
+renderer = IssueRenderer.new(custom_data)
+
+input_files.each do |file_path|
+    begin
+        basename = Pathname.new(file_path).basename(".json").to_s
+        if (basename == "sync_state")
+            next
+        end
+        output_file = target + "/" + basename + ".md"
+        issue = JSON.parse(IO.read(file_path))
+        markdown =  renderer.render(issue)
+        File.write(output_file, markdown)
+    rescue => e
+        STDERR.puts("Problem rendering '#{file_path}'")
+        STDERR.puts(e.to_s)
+    end
+end
