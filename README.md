@@ -133,7 +133,7 @@ These files can be easily searched by ensuring they get indexed by a desktop sea
     },
     "sections" : {
          "Release Notes" : ["customfield_10806"]
-}
+    }
 }
 
 ~~~
