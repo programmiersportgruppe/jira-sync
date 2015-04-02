@@ -29,4 +29,5 @@ Gem::Specification.new do |s|
   s.add_dependency('trollop')
   s.add_dependency('httparty')
   s.add_dependency('parallel')
+  s.add_dependency('ruby-progressbar')
 end

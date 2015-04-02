@@ -156,6 +156,9 @@ Having a local, unix-friendly copy to avoid JIRA performance issues and make inf
 
 ## Potential Future Work
 
-* Remove tickets that have been moved to a different project
-* Use OAuth authentication
-* Improved error handling
+- [X] Make progress bar work
+- [X] Make output less noisy
+- [ ] Deal with authentication problems explicitly
+- [ ] Remove tickets that have been moved to a different project
+- [ ] Use OAuth authentication
+

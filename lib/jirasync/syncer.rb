@@ -19,32 +19,34 @@ module JiraSync
         # couldn't be fetched.
         def fetch(keys)
             keys_with_errors = []
-            Parallel.each_with_index(keys, :in_threads => 64) do |key, index|
-                STDERR.puts(key) if ((index % 100) == 0)
+            tickets_moved = []
+            Parallel.each_with_index(keys, :in_threads => 64, :progress => {title:"Fetching", output: STDERR}) do |key, index|
                 begin
                     issue = @client.get(key)
                     issue_project_key = issue['fields']['project']['key']
                     if (issue_project_key == @project_key)
                         @repo.save(issue)
                     else
-                        STDERR.puts("Skipping ticket #{key} which has moved to #{issue_project_key}.")
+                        tickets_moved.push(issue_project_key)
                     end
 
                 rescue FetchError => e
                     if (e.status != 404)
-                        STDERR.puts(e.to_s)
                         keys_with_errors.push(key)
                     else
-                        STDERR.puts("Ignoring 404 for ticket #{key}")
+                        # Ticket has disappeared
                     end
                 rescue => e
                     STDERR.puts(e.to_s)
                     keys_with_errors.push(key)
                 end
             end
-            keys_with_errors.sort
+            keys_with_errors.sort!
+            STDERR.puts("Errors fetching these tickets: #{keys_with_errors.join(",")}")
+            keys_with_errors
         end
 
+        # Fetches all tickets for the project
         def fetch_all
             start_time = DateTime.now
 
@@ -54,16 +56,16 @@ module JiraSync
             @repo.save_state({"time" => start_time, "errors" => keys_with_errors})
         end
 
+        # Fetches only tickets that have been changed/ added since the previous fetch/ update
         def update()
             state = @repo.load_state()
             start_time = DateTime.now
             since = DateTime.parse(state['time']).new_offset(0)
             STDERR.puts("Fetching issues that have changes since #{since.to_s}")
             issues = @client.changed_since(@project_key, since)['issues'].map { |issue| issue['key'] }
-            STDERR.puts("Updated Issues")
-            STDERR.puts(issues.empty? ?  "None" : issues.join(", "))
-            STDERR.puts("Issues with earlier errors")
-            STDERR.puts(state['errors'].empty? ? "None" : state['errors'].join(", "))
+            STDERR.puts("Updated Issues: #{issues.empty? ?  "None" : issues.join(",")}")
+            STDERR.print("Retrying issues with earlier errors: ")
+            STDERR.puts(state['errors'].empty? ? "None" : state['errors'].join(","))
             keys_with_errors = fetch(issues + state['errors'])
             @repo.save_state({"time" => start_time, "errors" => keys_with_errors})
         end
