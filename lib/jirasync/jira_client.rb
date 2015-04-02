@@ -45,7 +45,7 @@ module JiraSync
             if response.code == 200
                 response.parsed_response
             else
-                raise FetchError.new(response.status, url)
+                raise FetchError.new(response.code, url)
             end
         end
 
@@ -58,7 +58,7 @@ module JiraSync
             if response.code == 200
                 response.parsed_response
             else
-                raise FetchError.new(response.status, url)
+                raise FetchError.new(response.code, url)
             end
         end
 
@@ -69,7 +69,7 @@ module JiraSync
             if response.code == 200
                 response.parse_response
             else
-                raise FetchError(response.status, url)
+                raise FetchError(response.code, url)
             end
 
         end
