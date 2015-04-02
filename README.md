@@ -1,6 +1,6 @@
 # jira-sync
 
-A suite of utilities to synchronise jira projects to the local file system
+A suite of utilities to synchronise JIRA projects to the local file system
 
 ## Installation
 
@@ -58,8 +58,8 @@ jira-sync \
 
 ### Formatting Issues
 
-While json files are very handy to use in code, they are not very readable. The `jira-format-issues` command
-formats json issues to markdown. It is invoked as follows:
+While JSON files are very handy to use in code, they are not very readable. The `jira-format-issues` command
+formats JSON issues to markdown. It is invoked as follows:
 
 ~~~ {.bash}
 
@@ -152,7 +152,7 @@ jira-format-issues \
 
 ## Motivation
 
-Having a local, unix-friendly copy to avoid jira performance issues and make information available offline.
+Having a local, unix-friendly copy to avoid JIRA performance issues and make information available offline.
 
 ## Potential Future Work
 
