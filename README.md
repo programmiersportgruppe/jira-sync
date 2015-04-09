@@ -11,10 +11,9 @@ A suite of utilities to synchronise JIRA projects to the local file system
 
 ### Initial Fetch
 
-The following command will start synchronising a the project `MYPROJ` from the server at
+The following command will start synchronising the project `MYPROJ` from the server at
 `https://jira.myorganisation.com`. The issues from that project will be written to the
 `issues/MYPROJ` folder:
-
 
     jira-sync \
         --baseurl https://jira.myorganisation.com \
@@ -23,7 +22,6 @@ The following command will start synchronising a the project `MYPROJ` from the s
         --password jira_password \
         --target issues/MYPROJ/json \
         fetch
-
 
 When this passes successfully the `issues/MYPROJ/json` directory will contain the following structure:
 
@@ -61,16 +59,15 @@ jira-sync \
 While JSON files are very handy to use in code, they are not very readable. The `jira-format-issues` command
 formats JSON issues to markdown. It is invoked as follows:
 
-~~~ {.bash}
+~~~ {.sh}
 
-    jira-format-issues \
-        --source  issues/MYPROJECT/json \
-        --target  issues/MYPROJECT/markdown
+jira-format-issues \
+    --source  issues/MYPROJECT/json \
+    --target  issues/MYPROJECT/markdown
 
 ~~~
 
 This will create the following structure in the `issues/MYPROJ/markdown`:
-
 
     MYPROJ-1.md
     MYPROJ-2.md
@@ -78,12 +75,11 @@ This will create the following structure in the `issues/MYPROJ/markdown`:
     MYPROJ-4.md
     …
 
-
 The individual files look like this:
 
 ~~~ {.md}
-[MYPROJ-1](https://jira.myorganisation.co/browse/MYPROJ-1): Build a working System
-==================================================================================
+[MYPROJ-1](https://jira.myorganisation.com/browse/MYPROJ-1): Build a working System
+===================================================================================
 
 Type
 :   Story
@@ -123,7 +119,7 @@ These files can be easily searched by ensuring they get indexed by a desktop sea
 [spotlight](https://gist.github.com/gereon/3150445) on the Mac.
 
  There is also the possibility to render custom jira fields by supplying a *custom data* file, which declares *simple
- data* fields which are rendered as definitions at the top of the ticket and *sections* that are rendered as paragraph
+ data* fields which are rendered as definitions at the top of the ticket and *sections* that are rendered as one or more paragraphs
  with a heading. Here is an example file, `custom-data.json`:
 
 ~~~ {.json}
@@ -152,7 +148,8 @@ jira-format-issues \
 
 ## Motivation
 
-Having a local, unix-friendly copy to avoid JIRA performance issues and make information available offline.
+Having a local, unix-friendly copy of all tickets to avoid JIRA performance issues and
+make information available offline.
 
 ## Potential Future Work
 
