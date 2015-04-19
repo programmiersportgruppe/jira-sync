@@ -55,7 +55,7 @@ module JiraSync
         
         def save_attachment(issue, attachment, data)
             file_path = "#{@attachments_path}/#{issue['key']} #{attachment['id']} #{attachment['filename']}"
-            File.write(file_path, data)
+            File.write(file_path, data, {:mode => 'wb'})
         end
     end
 end

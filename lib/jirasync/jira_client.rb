@@ -49,7 +49,7 @@ module JiraSync
                 auth = {:username => @username, :password => @password}
                 response = HTTParty.get attachment['content'], {:basic_auth => auth, :timeout => @timeout}
                 if response.code == 200
-                    attachments.push({:data => response, :attachment => attachment, :issue => issue})
+                    attachments.push({:data => response.body, :attachment => attachment, :issue => issue})
                 else
                     raise FetchError.new(response.code, url)
                 end
