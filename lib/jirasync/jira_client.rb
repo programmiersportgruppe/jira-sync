@@ -3,6 +3,7 @@ module JiraSync
     require 'httparty'
     require 'uri'
     require 'json'
+    require 'parallel'
 
 
     class FetchError < StandardError
@@ -40,6 +41,21 @@ module JiraSync
             else
                 raise FetchError.new(response.code, url)
             end
+        end
+
+        def attachments_for_issue(issue)
+            attachments = []
+            Parallel.map(issue['fields']['attachment'], :in_threads => 64) do |attachment|
+                auth = {:username => @username, :password => @password}
+                response = HTTParty.get attachment['content'], {:basic_auth => auth, :timeout => @timeout}
+                if response.code == 200
+                    attachments.push({:data => response, :attachment => attachment, :issue => issue})
+                else
+                    raise FetchError.new(response.code, url)
+                end
+            end
+            
+            attachments
         end
 
         def latest_issue_for_project(project_id)

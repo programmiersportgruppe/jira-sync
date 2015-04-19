@@ -25,7 +25,9 @@ module JiraSync
                     issue = @client.get(key)
                     issue_project_key = issue['fields']['project']['key']
                     if (issue_project_key == @project_key)
-                        @repo.save(issue)
+                        attachments = []
+                        attachments = @client.attachments_for_issue(issue) if @repo.stores_attachments?
+                        @repo.save(issue, attachments)
                     else
                         tickets_moved.push(issue_project_key)
                     end
