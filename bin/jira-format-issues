@@ -9,8 +9,10 @@ require 'uri'
 
 class IssueRenderer
     
-    def initialize(custom_data)
+    def initialize(custom_data, source_attachments)
         @custom_data = custom_data
+        @source_attachments = source_attachments
+        @found_attachments = []
     end
 
     def h1(s)
@@ -84,15 +86,34 @@ class IssueRenderer
             }.join("\n" * 2)
     end
 
-    def render_attachments(attachments)
+    def render_attachments(attachments, issue)
         return "" if attachments.length == 0
 
         h2("Attachments") + "\n" * 2 +
             attachments.map{|attachment|
                 filename    = attachment['filename']
-                content_url = attachment['content']
-                "* [#{filename}](#{content_url})"
+                content_url = find_attachment(attachment, issue)
+                extension = File.extname(filename)
+                STDERR.puts("extension: " + extension)
+                image_marker = [".png", ".jpg"].include?(extension) ? "!": ""
+
+                STDERR.puts("marker:     " + image_marker)
+                "* #{image_marker}[#{filename}](#{content_url})"
             }.join("\n" * 2)
+    end
+
+    def find_attachment(attachment, issue)
+        filename = "#{issue['key']}-#{attachment['id']}-#{attachment['filename'].gsub(" ", "_")}"
+        if File.file?("#{@source_attachments}/#{filename}")
+            @found_attachments.push(filename)
+            "attachments/#{filename}"
+        else
+            attachment['content']
+        end
+    end
+
+    def found_attachments
+        @found_attachments
     end
 
     def render(issue)
@@ -140,7 +161,7 @@ class IssueRenderer
                 sections.select{|kv| kv[1]}.map{|kv| optional_section(kv[0], kv[1])}.join("\n\n") + "\n\n" +
                 render_links(links, project_key) + "\n\n" +
                 render_comments(comments) + "\n\n" +
-                render_attachments(attachments)
+                render_attachments(attachments, issue)
     end
 end
 
@@ -164,6 +185,7 @@ Trollop::die :target, "must be speficied" if !opts[:target]
 source = opts[:source]
 target = opts[:target]
 
+
 FileUtils::mkdir_p target
 
 
@@ -176,7 +198,7 @@ else
     custom_data = {'simple_fields' => [], 'sections' => []}
 end
 
-renderer = IssueRenderer.new(custom_data)
+renderer = IssueRenderer.new(custom_data, "#{source}/attachments")
 
 input_files.each do |file_path|
     begin
@@ -192,4 +214,9 @@ input_files.each do |file_path|
         STDERR.puts("Problem rendering '#{file_path}'")
         STDERR.puts(e.to_s)
     end
+end
+
+FileUtils::mkdir_p "#{target}/attachments" unless renderer.found_attachments.empty?
+renderer.found_attachments.each do |filename|
+    FileUtils.cp("#{source}/attachments/#{filename}", "#{target}/attachments/#{filename}")
 end

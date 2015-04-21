@@ -32,6 +32,7 @@ EOS
     opt :user, "User, defaults to the current system user", :type => :string
     opt :password, "Password, if not specified there, will be an interactive prompt", :type => :string
     opt :target, "Target directory, defaults to the project key", :type => :string
+    opt :store_attachments, "Fetch and store attachments"
 end
 
 Trollop::die :baseurl, "must be speficied" if !opts[:baseurl]
@@ -42,6 +43,7 @@ user = opts[:user] || ENV['USER']
 pw = opts[:password] || prompt_for_password
 target = opts[:target] || opts[:project].chomp
 project = opts[:project]
+store_attachments = opts[:store_attachments]
 
 command = ARGV[0]
 
@@ -52,7 +54,7 @@ end
 
 client = JiraSync::JiraClient.new(opts[:baseurl], user, pw)
 repo = JiraSync::LocalIssueRepository.new(target)
-syncer = JiraSync::Syncer.new(client, repo, project)
+syncer = JiraSync::Syncer.new(client, repo, project, store_attachments)
 
 if command == "fetch"
     if (repo.state_exists?)
@@ -62,6 +64,7 @@ jira-sync \
     --user #{user} \\
     --project #{project} \\
     --target #{target} \\
+    --store-attachments \\
     update
         END
 
@@ -83,6 +86,7 @@ jira-sync \
     --user #{user} \\
     --project #{project} \\
     --target #{target} \\
+    --store-attachments \\
     fetch
         END
 

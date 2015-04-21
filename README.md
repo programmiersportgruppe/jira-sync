@@ -20,10 +20,10 @@ The following command will start synchronising the project `MYPROJ` from the ser
         --project MYPROJ  \
         --user jira_user \
         --password jira_password \
-        --target issues/MYPROJ/json \
+        --target issues/MYPROJ/raw \
         fetch
 
-When this passes successfully the `issues/MYPROJ/json` directory will contain the following structure:
+When this passes successfully the `issues/MYPROJ/raw` directory will contain the following structure:
 
     MYPROJ-1.json
     MYPROJ-2.json
@@ -49,11 +49,17 @@ jira-sync \
     --project MYPROJ  \
     --user jira_user \
     --password jira_password \
-    --target issues/MYPROJ/json \
+    --target issues/MYPROJ/raw \
     update
 
 ~~~
 
+### Fetching and Storing Attachments
+
+ 
+Passing in the `--store-attachments` option leads to attachments being fetched and stored in the local filesystem.
+They will we be stored in the `attachments/` sub-directory of the target directory.
+ 
 ### Formatting Issues
 
 While JSON files are very handy to use in code, they are not very readable. The `jira-format-issues` command
@@ -62,8 +68,8 @@ formats JSON issues to markdown. It is invoked as follows:
 ~~~ {.sh}
 
 jira-format-issues \
-    --source  issues/MYPROJECT/json \
-    --target  issues/MYPROJECT/markdown
+    --source  issues/MYPROJ/raw\
+    --target  issues/MYPROJ/markdown
 
 ~~~
 
@@ -155,6 +161,8 @@ make information available offline.
 
 - [X] Make progress bar work
 - [X] Make output less noisy
+- [X] Download attachments
+- [ ] Produce tabular output
 - [ ] Deal with authentication problems explicitly
 - [ ] Remove tickets that have been moved to a different project
 - [ ] Use OAuth authentication

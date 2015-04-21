@@ -40,5 +40,11 @@ module JiraSync
             s = IO.read(file_path)
             JSON.parse(s)
         end
+
+        def save_attachment(issue, attachment, data)
+            FileUtils::mkdir_p("#{@path}/attachments")
+            file_path = "#{@path}/attachments/#{issue['key']}-#{attachment['id']}-#{attachment['filename'].gsub(" ", "_")}"
+            File.write(file_path, data, {:mode => 'wb'})
+        end
     end
 end

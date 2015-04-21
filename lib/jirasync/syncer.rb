@@ -5,12 +5,13 @@ module JiraSync
 
     class Syncer
 
-        def initialize(client, repo, project_key)
+        def initialize(client, repo, project_key, store_attachments)
             @client = client
             @project_key = project_key
             latest_issue = @client.latest_issue_for_project(@project_key)['issues'][0]
             @latest_issue_key = latest_issue['key'].split("-")[1].to_i
             @repo = repo
+            @store_attachments = store_attachments
         end
 
         # Fetches a number of tickets in parallel
@@ -26,6 +27,12 @@ module JiraSync
                     issue_project_key = issue['fields']['project']['key']
                     if (issue_project_key == @project_key)
                         @repo.save(issue)
+                        if @store_attachments
+                            attachments = @client.attachments_for_issue(issue)
+                            attachments.each do |attachment|
+                                @repo.save_attachment(attachment[:issue], attachment[:attachment], attachment[:data])
+                            end
+                        end
                     else
                         tickets_moved.push(issue_project_key)
                     end
