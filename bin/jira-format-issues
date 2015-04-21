@@ -103,7 +103,7 @@ class IssueRenderer
     end
 
     def find_attachment(attachment, issue)
-        filename = "#{issue['key']}-#{attachment['id']}-#{attachment['filename']}"
+        filename = "#{issue['key']}-#{attachment['id']}-#{attachment['filename'].gsub(" ", "_")}"
         if File.file?("#{@source_attachments}/#{filename}")
             @found_attachments.push(filename)
             "attachments/#{filename}"
