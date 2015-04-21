@@ -93,13 +93,18 @@ class IssueRenderer
             attachments.map{|attachment|
                 filename    = attachment['filename']
                 content_url = find_attachment(attachment, issue)
-                "* [#{filename}](#{content_url})"
+                extension = File.extname(filename)
+                STDERR.puts("extension: " + extension)
+                image_marker = [".png", ".jpg"].include?(extension) ? "!": ""
+
+                STDERR.puts("marker:     " + image_marker)
+                "* #{image_marker}[#{filename}](#{content_url})"
             }.join("\n" * 2)
     end
 
     def find_attachment(attachment, issue)
-        filename = "#{issue['key']} #{attachment['id']} #{attachment['filename']}"
-        if File.file?("#{@source_attachments}/#{filename}") then
+        filename = "#{issue['key']}-#{attachment['id']}-#{attachment['filename']}"
+        if File.file?("#{@source_attachments}/#{filename}")
             @found_attachments.push(filename)
             "attachments/#{filename}"
         else
@@ -171,7 +176,6 @@ where [options] are:
 EOS
     opt :source, "Source directory containing json files for issues", :type => :string
     opt :target, "Target directory", :type => :string
-    opt :attachments, "Source directory containing attachments (optional)", :type => :string
     opt :custom_data_path, "Custom data description file (optional)", :type => :string
 end
 
@@ -180,7 +184,7 @@ Trollop::die :target, "must be speficied" if !opts[:target]
 
 source = opts[:source]
 target = opts[:target]
-attachments = opts[:attachments]
+
 
 FileUtils::mkdir_p target
 
@@ -194,7 +198,7 @@ else
     custom_data = {'simple_fields' => [], 'sections' => []}
 end
 
-renderer = IssueRenderer.new(custom_data, attachments)
+renderer = IssueRenderer.new(custom_data, "#{source}/attachments")
 
 input_files.each do |file_path|
     begin
@@ -213,6 +217,6 @@ input_files.each do |file_path|
 end
 
 FileUtils::mkdir_p "#{target}/attachments" unless renderer.found_attachments.empty?
-renderer.found_attachments.each do |filename| 
-  FileUtils.cp("#{attachments}/#{filename}", "#{target}/attachments/#{filename}")
+renderer.found_attachments.each do |filename|
+    FileUtils.cp("#{source}/attachments/#{filename}", "#{target}/attachments/#{filename}")
 end

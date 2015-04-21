@@ -5,23 +5,15 @@ module JiraSync
 
     class LocalIssueRepository
 
-        def initialize(path, attachments_path=nil)
+        def initialize(path)
             @path = path
             FileUtils::mkdir_p @path
-            @attachments_path = attachments_path
-            FileUtils::mkdir_p @attachments_path unless @attachments_path == nil
         end
 
-        def save(issue, attachments=[])
+        def save(issue)
             json = JSON.pretty_generate(issue)
             file_path = "#{@path}/#{issue['key']}.json"
             File.write(file_path, json)
-
-            if stores_attachments? then
-                attachments.each do |attachment|
-                    save_attachment(attachment[:issue], attachment[:attachment], attachment[:data])
-                end
-            end
 
             updateTime = DateTime.parse(issue['fields']['updated'])
 
@@ -48,13 +40,10 @@ module JiraSync
             s = IO.read(file_path)
             JSON.parse(s)
         end
-        
-        def stores_attachments?
-            @attachments_path != nil
-        end
-        
+
         def save_attachment(issue, attachment, data)
-            file_path = "#{@attachments_path}/#{issue['key']} #{attachment['id']} #{attachment['filename']}"
+            FileUtils::mkdir_p("#{@path}/attachments")
+            file_path = "#{@path}/attachments/#{issue['key']}-#{attachment['id']}-#{attachment['filename']}"
             File.write(file_path, data, {:mode => 'wb'})
         end
     end
