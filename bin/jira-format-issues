@@ -94,10 +94,7 @@ class IssueRenderer
                 filename    = attachment['filename']
                 content_url = find_attachment(attachment, issue)
                 extension = File.extname(filename)
-                STDERR.puts("extension: " + extension)
                 image_marker = [".png", ".jpg"].include?(extension) ? "!": ""
-
-                STDERR.puts("marker:     " + image_marker)
                 "* #{image_marker}[#{filename}](#{content_url})"
             }.join("\n" * 2)
     end

@@ -49,7 +49,9 @@ module JiraSync
                 end
             end
             keys_with_errors.sort!
-            STDERR.puts("Errors fetching these tickets: #{keys_with_errors.join(",")}")
+            if !keys_with_errors.empty?
+                STDERR.puts("Errors fetching these tickets: #{keys_with_errors.join(",")}")
+            end
             keys_with_errors
         end
 
@@ -68,11 +70,13 @@ module JiraSync
             state = @repo.load_state()
             start_time = DateTime.now
             since = DateTime.parse(state['time']).new_offset(0)
-            STDERR.puts("Fetching issues that have changes since #{since.to_s}")
+            STDERR.puts("Fetching issues that have been changed/ added since #{since.to_s}")
             issues = @client.changed_since(@project_key, since)['issues'].map { |issue| issue['key'] }
             STDERR.puts("Updated Issues: #{issues.empty? ?  "None" : issues.join(",")}")
-            STDERR.print("Retrying issues with earlier errors: ")
-            STDERR.puts(state['errors'].empty? ? "None" : state['errors'].join(","))
+            if !state['errors'].empty?
+                STDERR.print("Retrying issues with earlier errors: ")
+                STDERR.puts( state['errors'].join(","))
+            end
             keys_with_errors = fetch(issues + state['errors'])
             @repo.save_state({"time" => start_time, "errors" => keys_with_errors})
         end
