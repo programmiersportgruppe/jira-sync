@@ -1,11 +1,12 @@
 # jira-sync
 
+[![Gem Version](https://badge.fury.io/rb/jirasync.svg)](http://badge.fury.io/rb/jirasync)
+
 A suite of utilities to synchronise JIRA projects to the local file system
 
 ## Installation
 
     gem install jirasync
-
 
 ## Usage
 
