@@ -1,5 +1,9 @@
 [![Gem Version](https://badge.fury.io/rb/jirasync.svg)](http://badge.fury.io/rb/jirasync)
 
+## Intent of this fork ....
+
+I'm looking at adding a docx generator in addition to some mods to the markdown generator.
+
 ## Installation
 
     gem install jirasync
@@ -53,10 +57,10 @@ jira-sync \
 
 ### Fetching and Storing Attachments
 
- 
+
 Passing in the `--store-attachments` option leads to attachments being fetched and stored in the local filesystem.
 They will we be stored in the `attachments/` sub-directory of the target directory.
- 
+
 ### Formatting Issues
 
 While JSON files are very handy to use in code, they are not very readable. The `jira-format-issues` command
