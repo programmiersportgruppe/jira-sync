@@ -128,7 +128,13 @@ class IssueRenderer
         links = fields['issuelinks']
         attachments = fields['attachment']
         project_key = fields['project']['key']
-
+        
+        priority = fields['priority']['name']
+        components = fields['components']['name']
+        service = fields['customfield_10413']['value']
+        customer = fields['customfield_10401']['value']
+        
+        
         created = DateTime.parse(fields['created'])
         updated = DateTime.parse(fields['updated'])
 
@@ -141,7 +147,11 @@ class IssueRenderer
             "Reporter" => reporter,
             "Labels" => labels.join(", "),
             "Updated" => format_date(updated),
-            "Created" => format_date(created)
+            "Created" => format_date(created),
+            "Priority" => priority,
+            "Components" => components,
+            "Service" => => service,
+            "Customer" = customer
         }
         
         simple_fields = simple_fields.to_a + @custom_data['simple_fields'].map{|kv| [kv[0], kv[1].inject(fields) { |acc, key | acc && acc[key] }]}
