@@ -128,7 +128,13 @@ class IssueRenderer
         links = fields['issuelinks']
         attachments = fields['attachment']
         project_key = fields['project']['key']
-
+        
+        priority = fields['priority']['name']
+        components = fields['components']['name']
+        service = fields['customfield_10413']['value']
+        customer = fields['customfield_10401']['value']
+        
+        
         created = DateTime.parse(fields['created'])
         updated = DateTime.parse(fields['updated'])
 
