@@ -20,11 +20,48 @@ module JiraSync
     end
 
 
+    class JiraAuthentication
+        attr_reader :options
+
+        def initialize(options)
+            @options = options
+        end
+    end
+
+
+    class UsernamePasswordAuthentication < JiraAuthentication
+        attr_reader :username
+
+        def initialize(username, password)
+            super({
+                :basic_auth => {
+                    :username => username,
+                    :password => password,
+                },
+            })
+            @username = username
+        end
+    end
+
+
+    class CookieAuthentication < JiraAuthentication
+        attr_reader :cookie
+
+        def initialize(cookie)
+            super({
+                :headers => {
+                    "Cookie" => cookie,
+                },
+            })
+            @cookie = cookie
+        end
+    end
+
+
     class JiraClient
 
-        def initialize(baseurl, username, password)
-            @username = username
-            @password = password
+        def initialize(baseurl, authentication)
+            @authentication = authentication
             @baseurl = baseurl
             @timeout = 15
             @first_requets_timeout = 60
@@ -34,8 +71,7 @@ module JiraSync
 
         def get(jira_id)
             url = "#{@baseurl}/rest/api/latest/issue/#{jira_id}"
-            auth = {:username => @username, :password => @password}
-            response = HTTParty.get url, {:basic_auth => auth, :timeout => @timeout}
+            response = HTTParty.get url, @authentication.options.merge({:timeout => @timeout})
             if response.code == 200
                 response.parsed_response
             else
@@ -46,8 +82,7 @@ module JiraSync
         def attachments_for_issue(issue)
             attachments = []
             Parallel.map(issue['fields']['attachment'], :in_threads => 64) do |attachment|
-                auth = {:username => @username, :password => @password}
-                response = HTTParty.get attachment['content'], {:basic_auth => auth, :timeout => @timeout}
+                response = HTTParty.get attachment['content'], @authentication.options.merge({:timeout => @timeout})
                 if response.code == 200
                     attachments.push({:data => response.body, :attachment => attachment, :issue => issue})
                 else
@@ -60,13 +95,12 @@ module JiraSync
 
         def latest_issue_for_project(project_id)
             url = "#{@baseurl}/rest/api/2/search?"
-            auth = {:username => @username, :password => @password}
 
-            response = HTTParty.get url, {
-                :basic_auth => auth,
+            response = HTTParty.get url, @authentication.options.merge({
                 :query => {:jql => 'project="' + project_id + '" order by created', fields: 'summary,updated', maxResults: '1'},
+                :debug_output => $stdout,
                 :timeout => @first_requets_timeout
-            }
+            })
             if response.code == 200
                 response.parsed_response
             else
@@ -76,14 +110,12 @@ module JiraSync
 
         def changed_since(project_id, date)
             url = "#{@baseurl}/rest/api/2/search?"
-            auth = {:username => @username, :password => @password}
             jql = 'project = "' + project_id + '" AND updated > ' + (date.to_time.to_i * 1000).to_s
             # "' + date.to_s + '"'
-            response = HTTParty.get url, {
-                :basic_auth => auth,
+            response = HTTParty.get url, @authentication.options.merge({
                 :query => {:jql => jql, fields: 'summary,updated', maxResults: '1000'},
                 :timeout => @timeout
-            }
+            })
             if response.code == 200
                 response.parsed_response
             else
@@ -93,12 +125,10 @@ module JiraSync
 
         def project_info(project_id)
             url = "#{@baseurl}/rest/api/2/project/#{project_id}"
-            auth = {:username => @username, :password => @password}
-            response = HTTParty.get url, {
-                :basic_auth => auth,
+            response = HTTParty.get url, @authentication.options.merge({
                 :query => {:jql => 'project="' + project_id + '"', fields: 'summary,updated', maxResults: '50'},
                 :timeout => @timeout
-            }
+            })
             if response.code == 200
                 response.parse_response
             else
