@@ -21,7 +21,7 @@ Usage:
        jira-sync [options] [command]
 where command is one of the following
 
-  fetch-all: fetches all tickets from the given project
+      fetch: fetches all tickets from the given project
      update: fetches all tickets that have been updated/
              added since the last run
 
