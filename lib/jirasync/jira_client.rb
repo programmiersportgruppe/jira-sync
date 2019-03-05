@@ -98,7 +98,6 @@ module JiraSync
 
             response = HTTParty.get url, @authentication.options.merge({
                 :query => {:jql => 'project="' + project_id + '" order by created', fields: 'summary,updated', maxResults: '1'},
-                :debug_output => $stdout,
                 :timeout => @first_requets_timeout
             })
             if response.code == 200
