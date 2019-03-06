@@ -149,6 +149,18 @@ jira-format-issues \
 
 ~~~
 
+## Using Cookie-Authentication
+
+If a single-sign-on solution is used, `jira-sync` can also use the session
+cookie to authenticate requests to jira, likeso:
+
+    jira-sync \
+        --baseurl https://jira.myorganisation.com \
+        --project MYPROJ  \
+        --cookie JSESSIONID=… \
+        --target issues/MYPROJ/raw \
+        fetch
+
 ## Motivation
 
 Having a local, unix-friendly copy of all tickets to avoid JIRA performance issues and
