@@ -31,6 +31,7 @@ EOS
     opt :project, "Project key", :type => :string
     opt :user, "User, defaults to the current system user", :type => :string
     opt :password, "Password, if not specified there, will be an interactive prompt", :type => :string
+    opt :cookie, "Session cookie, to use cookie-based authentication instead of username & password (e.g. 'JSESSIONID=ABC123')", :type => :string
     opt :target, "Target directory, defaults to the project key", :type => :string
     opt :store_attachments, "Fetch and store attachments"
 end
@@ -39,8 +40,14 @@ Trollop::die :baseurl, "must be speficied" if !opts[:baseurl]
 Trollop::die :project, "must be speficied" if !opts[:project]
 
 
-user = opts[:user] || ENV['USER']
-pw = opts[:password] || prompt_for_password
+authentication = begin
+    cookie = opts[:cookie]
+    if cookie then
+        JiraSync::CookieAuthentication.new(cookie)
+    else
+        JiraSync::UsernamePasswordAuthentication.new(opts[:user] || ENV['USER'], opts[:password] || prompt_for_password)
+    end
+end
 target = opts[:target] || opts[:project].chomp
 project = opts[:project]
 store_attachments = opts[:store_attachments]
@@ -52,7 +59,7 @@ if !["fetch", "update"].include?(command)
     exit 1
 end
 
-client = JiraSync::JiraClient.new(opts[:baseurl], user, pw)
+client = JiraSync::JiraClient.new(opts[:baseurl], authentication)
 repo = JiraSync::LocalIssueRepository.new(target)
 syncer = JiraSync::Syncer.new(client, repo, project, store_attachments)
 
@@ -61,7 +68,7 @@ if command == "fetch"
         update_statement=<<-END
 jira-sync \
     --baseurl #{opts[:baseurl]} \\
-    --user #{user} \\
+    #{ if authentication.cookie then "--cookie #{cookie}" else "--user #{user}" end} \\
     --project #{project} \\
     --target #{target} \\
     --store-attachments \\
@@ -83,7 +90,7 @@ if command == "update"
         fetch_statement=<<-END
 jira-sync \
     --baseurl #{opts[:baseurl]} \\
-    --user #{user} \\
+    #{ if authentication.cookie then "--cookie #{cookie}" else "--user #{user}" end} \\
     --project #{project} \\
     --target #{target} \\
     --store-attachments \\
