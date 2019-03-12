@@ -78,7 +78,7 @@ module JiraSync
                 STDERR.puts( state['errors'].join(","))
             end
             keys_with_errors = fetch(issues + state['errors'])
-            @repo.save_state({"time" => start_time, "errors" => keys_with_errors})
+            @repo.save_state({"time" => start_time, "errors" => keys_with_errors, 'updated' => issues})
         end
 
         def dump()
