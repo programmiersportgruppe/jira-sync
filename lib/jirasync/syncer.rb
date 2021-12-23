@@ -41,7 +41,7 @@ module JiraSync
                     if (e.status != 404)
                         keys_with_errors.push(key)
                     else
-                        # Ticket has disappeared
+                        @repo.remove(key)
                     end
                 rescue => e
                     STDERR.puts(e.to_s)
@@ -83,7 +83,6 @@ module JiraSync
 
         def dump()
             puts(@latest_issue_key)
-
         end
     end
 end

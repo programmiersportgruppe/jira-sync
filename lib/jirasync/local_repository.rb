@@ -12,12 +12,21 @@ module JiraSync
 
         def save(issue)
             json = JSON.pretty_generate(issue)
-            file_path = "#{@path}/#{issue['key']}.json"
+            file_path = issue_path(issue['key'])
             File.write(file_path, json)
 
             updateTime = DateTime.parse(issue['fields']['updated'])
 
             File.utime(DateTime.now.to_time, updateTime.to_time, file_path)
+        end
+
+        def remove(key)
+            path = issue_path(key)
+            FileUtils.rm_f(path)
+        end
+
+        def issue_path(key)
+            "#{@path}/#{key}.json"
         end
 
         def state_exists?
