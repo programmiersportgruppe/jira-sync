@@ -30,81 +30,51 @@ module JiraSync
             @first_requets_timeout = 60
         end
 
-
-
         def get(jira_id)
-            url = "#{@baseurl}/rest/api/latest/issue/#{jira_id}"
-            auth = {:username => @username, :password => @password}
-            response = HTTParty.get url, {:basic_auth => auth, :timeout => @timeout}
-            if response.code == 200
-                response.parsed_response
-            else
-                raise FetchError.new(response.code, url)
-            end
+            api_get "issue/#{jira_id}"
         end
 
         def attachments_for_issue(issue)
             attachments = []
             Parallel.map(issue['fields']['attachment'], :in_threads => 64) do |attachment|
-                auth = {:username => @username, :password => @password}
-                response = HTTParty.get attachment['content'], {:basic_auth => auth, :timeout => @timeout}
-                if response.code == 200
-                    attachments.push({:data => response.body, :attachment => attachment, :issue => issue})
-                else
-                    raise FetchError.new(response.code, url)
-                end
+                response = http_get attachment['content']
+                attachments.push({:data => response.body, :attachment => attachment, :issue => issue})
             end
-            
             attachments
         end
 
         def latest_issue_for_project(project_id)
-            url = "#{@baseurl}/rest/api/2/search?"
-            auth = {:username => @username, :password => @password}
-
-            response = HTTParty.get url, {
-                :basic_auth => auth,
-                :query => {:jql => 'project="' + project_id + '" order by created', fields: 'summary,updated', maxResults: '1'},
-                :timeout => @first_requets_timeout
-            }
-            if response.code == 200
-                response.parsed_response
-            else
-                raise FetchError.new(response.code, url)
-            end
+            api_get "search",
+                query: {:jql => 'project="' + project_id + '" order by created', fields: 'summary,updated', maxResults: '1'},
+                timeout: @first_requets_timeout
         end
 
         def changed_since(project_id, date)
-            url = "#{@baseurl}/rest/api/2/search?"
-            auth = {:username => @username, :password => @password}
             jql = 'project = "' + project_id + '" AND updated > ' + (date.to_time.to_i * 1000).to_s
             # "' + date.to_s + '"'
+            api_get "search", query: {:jql => jql, fields: 'summary,updated', maxResults: '1000'}
+        end
+
+        def project_info(project_id)
+            api_get "project/#{project_id}", query: {:jql => 'project="' + project_id + '"', fields: 'summary,updated', maxResults: '50'}
+        end
+
+        private def api_get(relative_path)
+            http_get "#{@baseurl}/rest/api/2/#{relative_path}"
+        end
+
+        private def http_get(url, query: nil, timeout: @timeout)
+            auth = {:username => @username, :password => @password}
             response = HTTParty.get url, {
                 :basic_auth => auth,
-                :query => {:jql => jql, fields: 'summary,updated', maxResults: '1000'},
-                :timeout => @timeout
+                :query => query,
+                :timeout => timeout,
             }
             if response.code == 200
                 response.parsed_response
             else
                 raise FetchError.new(response.code, url)
             end
-        end
-
-        def project_info(project_id)
-            url = "#{@baseurl}/rest/api/2/project/#{project_id}"
-            auth = {:username => @username, :password => @password}
-            response = HTTParty.get url, {
-                :basic_auth => auth,
-                :query => {:jql => 'project="' + project_id + '"', fields: 'summary,updated', maxResults: '50'},
-                :timeout => @timeout
-            }
-            if response.code == 200
-                response.parse_response
-            else
-                raise FetchError(response.code, url)
-            end
-
         end
     end
 end
